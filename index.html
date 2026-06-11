@@ -1,85 +1,122 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <title>二進法と十進法の変換練習</title>
+    <meta charset="UTF-8" />
+    <title>二進法と十進法の変換問題練習</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 2em;
         }
+        #problem {
+            font-size: 1.5em;
+            margin-bottom: 1em;
+        }
         label {
-            display: block;
-            margin-top: 1em;
+            font-weight: bold;
         }
         input[type="text"] {
             width: 200px;
             padding: 0.3em;
             font-size: 1em;
+            margin-left: 0.5em;
         }
         button {
             margin-left: 0.5em;
-            padding: 0.3em 0.7em;
+            padding: 0.4em 0.8em;
             font-size: 1em;
         }
-        .result {
+        #result {
             margin-top: 1em;
             font-weight: bold;
-            color: #0066cc;
+            font-size: 1.2em;
         }
-        .error {
+        #result.correct {
+            color: green;
+        }
+        #result.incorrect {
             color: red;
         }
     </style>
 </head>
 <body>
-    <h1>二進法と十進法の変換練習ページ</h1>
-
-    <div>
-        <label for="decimalInput">十進数を入力してください：</label>
-        <input type="text" id="decimalInput" placeholder="例: 10">
-        <button onclick="decimalToBinary()">二進数に変換</button>
-        <div id="binaryResult" class="result"></div>
-    </div>
-
-    <div>
-        <label for="binaryInput">二進数を入力してください：</label>
-        <input type="text" id="binaryInput" placeholder="例: 1010">
-        <button onclick="binaryToDecimal()">十進数に変換</button>
-        <div id="decimalResult" class="result"></div>
-    </div>
+    <h1>二進法と十進法の変換問題練習</h1>
+    <div id="problem">問題表示エリア</div>
+    <label for="answerInput">答えを入力してください:</label>
+    <input type="text" id="answerInput" autocomplete="off" />
+    <button id="checkBtn">答え合わせ</button>
+    <button id="nextBtn" disabled>次の問題</button>
+    <div id="result"></div>
 
     <script>
-        function decimalToBinary() {
-            const decimalStr = document.getElementById('decimalInput').value.trim();
-            const binaryResult = document.getElementById('binaryResult');
-            binaryResult.classList.remove('error');
+        let currentProblem = {};
+        
+        // 問題をランダムに生成（10～255の範囲で）
+        function generateProblem() {
+            const num = Math.floor(Math.random() * 246) + 10; // 10～255
+            // 0なら十進数→二進数問題、1なら二進数→十進数問題
+            const type = Math.random() < 0.5 ? 'decToBin' : 'binToDec';
 
-            if (!/^\d+$/.test(decimalStr)) {
-                binaryResult.textContent = '有効な十進数を入力してください。';
-                binaryResult.classList.add('error');
-                return;
+            if (type === 'decToBin') {
+                return {
+                    question: `次の十進数を二進数に変換してください：${num}`,
+                    answer: num.toString(2),
+                    type: 'decToBin'
+                };
+            } else {
+                return {
+                    question: `次の二進数を十進数に変換してください：${num.toString(2)}`,
+                    answer: String(num),
+                    type: 'binToDec'
+                };
             }
-
-            const decimalNum = parseInt(decimalStr, 10);
-            const binaryStr = decimalNum.toString(2);
-            binaryResult.textContent = `二進数: ${binaryStr}`;
         }
 
-        function binaryToDecimal() {
-            const binaryStr = document.getElementById('binaryInput').value.trim();
-            const decimalResult = document.getElementById('decimalResult');
-            decimalResult.classList.remove('error');
-
-            if (!/^[01]+$/.test(binaryStr)) {
-                decimalResult.textContent = '有効な二進数を入力してください（0と1のみ）。';
-                decimalResult.classList.add('error');
-                return;
+        function normalizeAnswer(ans, type) {
+            // 答えの空白削除、小文字化など基本処理
+            let a = ans.trim();
+            if (type === 'decToBin') {
+                // 二進数は0と1のみなので先頭の0は無視して比較したい
+                a = a.replace(/^0+/, '') || '0';
+            } else {
+                // 十進数は整数なので先頭の0は無視
+                a = a.replace(/^0+/, '') || '0';
             }
-
-            const decimalNum = parseInt(binaryStr, 2);
-            decimalResult.textContent = `十進数: ${decimalNum}`;
+            return a;
         }
+
+        function checkAnswer() {
+            const input = document.getElementById('answerInput').value;
+            const resultDiv = document.getElementById('result');
+            const answerNormalized = normalizeAnswer(currentProblem.answer, currentProblem.type);
+            const inputNormalized = normalizeAnswer(input, currentProblem.type);
+
+            if (inputNormalized === answerNormalized) {
+                resultDiv.textContent = '正解！';
+                resultDiv.className = 'correct';
+            } else {
+                resultDiv.textContent = `不正解。正しい答えは「${currentProblem.answer}」です。`;
+                resultDiv.className = 'incorrect';
+            }
+            document.getElementById('checkBtn').disabled = true;
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        function nextProblem() {
+            currentProblem = generateProblem();
+            document.getElementById('problem').textContent = currentProblem.question;
+            document.getElementById('answerInput').value = '';
+            document.getElementById('answerInput').focus();
+            document.getElementById('result').textContent = '';
+            document.getElementById('checkBtn').disabled = false;
+            document.getElementById('nextBtn').disabled = true;
+        }
+
+        document.getElementById('checkBtn').addEventListener('click', checkAnswer);
+        document.getElementById('nextBtn').addEventListener('click', nextProblem);
+
+        // ページ読み込み時に最初の問題を表示
+        window.onload = nextProblem;
     </script>
 </body>
 </html>
