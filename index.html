@@ -37,6 +37,14 @@
         #result.incorrect {
             color: red;
         }
+        #explanation {
+            margin-top: 1em;
+            background: #f0f8ff;
+            border-left: 4px solid #0066cc;
+            padding: 1em;
+            white-space: pre-wrap;
+            font-family: "Courier New", Courier, monospace;
+        }
     </style>
 </head>
 <body>
@@ -47,10 +55,11 @@
     <button id="checkBtn">答え合わせ</button>
     <button id="nextBtn" disabled>次の問題</button>
     <div id="result"></div>
+    <div id="explanation"></div>
 
     <script>
         let currentProblem = {};
-        
+
         // 問題をランダムに生成（10～255の範囲で）
         function generateProblem() {
             const num = Math.floor(Math.random() * 246) + 10; // 10～255
@@ -61,33 +70,70 @@
                 return {
                     question: `次の十進数を二進数に変換してください：${num}`,
                     answer: num.toString(2),
+                    decimal: num,
                     type: 'decToBin'
                 };
             } else {
                 return {
                     question: `次の二進数を十進数に変換してください：${num.toString(2)}`,
                     answer: String(num),
+                    binary: num.toString(2),
                     type: 'binToDec'
                 };
             }
         }
 
         function normalizeAnswer(ans, type) {
-            // 答えの空白削除、小文字化など基本処理
             let a = ans.trim();
             if (type === 'decToBin') {
-                // 二進数は0と1のみなので先頭の0は無視して比較したい
                 a = a.replace(/^0+/, '') || '0';
             } else {
-                // 十進数は整数なので先頭の0は無視
                 a = a.replace(/^0+/, '') || '0';
             }
             return a;
         }
 
+        // 十進数→二進数の解説を作成
+        function explainDecToBin(decimal) {
+            let explanation = `【解説】\n十進数 ${decimal} を二進数に変換するには、\n${decimal} を2で割り続け、余りを逆順に並べます。\n\n割り算の過程:\n`;
+            let n = decimal;
+            let steps = [];
+            while (n > 0) {
+                const remainder = n % 2;
+                const quotient = Math.floor(n / 2);
+                steps.push(`${n} ÷ 2 = ${quotient} 余り ${remainder}`);
+                n = quotient;
+            }
+            // 逆順に表示
+            for (let i = steps.length - 1; i >= 0; i--) {
+                explanation += steps[i] + '\n';
+            }
+            explanation += `\n余りを下から上へ並べると二進数：${decimal.toString(2)} となります。`;
+            return explanation;
+        }
+
+        // 二進数→十進数の解説を作成
+        function explainBinToDec(binary) {
+            let explanation = `【解説】\n二進数 ${binary} を十進数に変換するには、\n各桁の値にその桁の2のべき乗をかけて足します。\n\n計算の過程:\n`;
+            const len = binary.length;
+            let sum = 0;
+            for (let i = 0; i < len; i++) {
+                const bit = binary[len - 1 - i]; // 右端が0桁目
+                const bitValue = bit === '1' ? 1 : 0;
+                const power = Math.pow(2, i);
+                const value = bitValue * power;
+                explanation += `桁 ${len - i} (${bit}) × 2^${i} = ${value}\n`;
+                sum += value;
+            }
+            explanation += `\nこれらを合計すると十進数：${sum} となります。`;
+            return explanation;
+        }
+
         function checkAnswer() {
             const input = document.getElementById('answerInput').value;
             const resultDiv = document.getElementById('result');
+            const explanationDiv = document.getElementById('explanation');
+            explanationDiv.textContent = '';
             const answerNormalized = normalizeAnswer(currentProblem.answer, currentProblem.type);
             const inputNormalized = normalizeAnswer(input, currentProblem.type);
 
@@ -98,6 +144,14 @@
                 resultDiv.textContent = `不正解。正しい答えは「${currentProblem.answer}」です。`;
                 resultDiv.className = 'incorrect';
             }
+
+            // 解説表示
+            if (currentProblem.type === 'decToBin') {
+                explanationDiv.textContent = explainDecToBin(currentProblem.decimal);
+            } else {
+                explanationDiv.textContent = explainBinToDec(currentProblem.binary);
+            }
+
             document.getElementById('checkBtn').disabled = true;
             document.getElementById('nextBtn').disabled = false;
         }
@@ -108,6 +162,7 @@
             document.getElementById('answerInput').value = '';
             document.getElementById('answerInput').focus();
             document.getElementById('result').textContent = '';
+            document.getElementById('explanation').textContent = '';
             document.getElementById('checkBtn').disabled = false;
             document.getElementById('nextBtn').disabled = true;
         }
@@ -115,7 +170,6 @@
         document.getElementById('checkBtn').addEventListener('click', checkAnswer);
         document.getElementById('nextBtn').addEventListener('click', nextProblem);
 
-        // ページ読み込み時に最初の問題を表示
         window.onload = nextProblem;
     </script>
 </body>
