@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<title>音のデジタル化学習教材（ランダム波形・軸メモリ・複数入力欄）</title>
+<title>音のデジタル化学習教材（滑らかな波形・振幅バリエーション・ビット数連動軸）</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -119,43 +119,43 @@
   let samplingCount = 0;
   let quantBits = 3;
 
-  // 1秒間1000ポイントの波形生成 (ランダム性＋振幅変動)
+  // 1秒間1000ポイントの滑らかな波形生成（振幅強弱バリエーションあり）
   function generateWaveform() {
     waveform = [];
     const sampleCount = 1000;
-    // 振幅変動用の低周波変動(0.3〜0.7の範囲)
+
+    // 振幅変動を滑らかに変化させるための低周波変動 (0.3〜0.7の範囲)
     const ampBase = [];
     for(let i=0; i<sampleCount; i++) {
-      // 0.1Hz程度のゆっくり変動をシミュレート
+      // 0.1Hzのゆったり変動、サイン波1本でシンプルに
       ampBase.push(0.5 + 0.2 * Math.sin(2 * Math.PI * 0.1 * (i/sampleCount*1000)));
     }
+
+    // 波形は複数の低周波サイン波の和（5Hz, 10Hz）で滑らかに
     for(let i=0; i<sampleCount; i++) {
       const t = i / sampleCount;
-      // 5Hz〜15Hzの複数サイン波を足す
+      // 5Hz, 10Hzのサイン波のみ。ノイズはなしで滑らかに
       let val = 0;
-      val += 0.4 * Math.sin(2 * Math.PI * 5 * t);
-      val += 0.2 * Math.sin(2 * Math.PI * 11 * t + 1);
-      val += 0.1 * Math.sin(2 * Math.PI * 15 * t + 2);
+      val += 0.5 * Math.sin(2 * Math.PI * 5 * t);
+      val += 0.3 * Math.sin(2 * Math.PI * 10 * t + 1);
       // 振幅変動乗算
       val *= ampBase[i];
-      // ノイズ
-      val += (Math.random() - 0.5) * 0.05;
-      // 0〜1に正規化
-      val = (val + 0.7) / 1.4;
+      // 正規化 (±0.8 → 0〜1に変換)
+      val = (val + 0.8) / 1.6;
       if(val < 0) val = 0;
       if(val > 1) val = 1;
       waveform.push(val);
     }
   }
 
-  // 軸とメモリを描画
-  function drawAxes() {
+  // 軸とメモリ描画（縦軸は量子化ビット数に合わせて0から区切る、破線で半段階値を表示）
+  function drawAxes(levels) {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     ctx.strokeStyle = '#000';
     ctx.fillStyle = '#000';
     ctx.lineWidth = 1;
 
-    // 縦軸 Y (振幅 0～1)
+    // 縦軸 Y (量子化レベル数に応じて0～levels)
     ctx.beginPath();
     ctx.moveTo(marginLeft, marginTop);
     ctx.lineTo(marginLeft, HEIGHT - marginBottom);
@@ -163,19 +163,24 @@
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    // 5目盛り
-    for(let i=0; i<=5; i++) {
-      const y = marginTop + i * (plotHeight/5);
-      const val = (1 - i/5).toFixed(1);
-      ctx.fillText(val, marginLeft - 5, y);
+
+    // 目盛りはつけないが、破線で半段階の横線を描画（色薄く）
+    ctx.strokeStyle = '#999';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,4]);
+    for(let i=0; i<=levels*2; i++) {
+      // iは0,0.5,1,1.5,...levelsの半段階
+      const y = marginTop + plotHeight * (1 - i/(levels*2));
       ctx.beginPath();
-      ctx.strokeStyle = '#ccc';
       ctx.moveTo(marginLeft, y);
       ctx.lineTo(WIDTH - marginRight, y);
       ctx.stroke();
-      ctx.strokeStyle = '#000';
     }
-    ctx.fillText('振幅', marginLeft - 35, marginTop + plotHeight/2);
+    ctx.setLineDash([]);
+    ctx.strokeStyle = '#000';
+
+    // 縦軸ラベル
+    ctx.fillText('量子化レベル', marginLeft - 35, marginTop + plotHeight/2);
 
     // 横軸 X (秒数 0～1秒)
     ctx.beginPath();
@@ -184,13 +189,15 @@
     ctx.stroke();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
+
     // 11目盛り (0.0〜1.0秒 0.1秒刻み)
     for(let i=0; i<=10; i++) {
       const x = marginLeft + i * (plotWidth / 10);
       const t = (i/10).toFixed(1);
       ctx.fillText(t + ' s', x, HEIGHT - marginBottom + 5);
-      ctx.beginPath();
+      // 軽い縦線メモリ（薄いグレー）
       ctx.strokeStyle = '#ccc';
+      ctx.beginPath();
       ctx.moveTo(x, marginTop);
       ctx.lineTo(x, HEIGHT - marginBottom);
       ctx.stroke();
@@ -199,7 +206,7 @@
     ctx.fillText('時間', marginLeft + plotWidth/2, HEIGHT - 10);
   }
 
-  // 波形描画
+  // 波形描画（滑らかな1本の曲線）
   function drawWaveform() {
     ctx.beginPath();
     ctx.strokeStyle = '#007acc';
@@ -352,7 +359,7 @@
       if(userQuant !== null && userEncoded !== null) {
         // 両方入力されているなら整合性チェック
         if(userQuant !== parseInt(userEncoded, 2)) {
-          messages.push(`サンプル${i+1}：量子化値と符号化値が一致しません。`);
+messages.push(`サンプル${i+1}：量子化値と符号化値が一致しません。`);
           allCorrect = false;
           continue;
         }
@@ -401,7 +408,7 @@
     quantBits = quantBitNum;
 
     generateWaveform();
-    drawAxes();
+    drawAxes(Math.pow(2, quantBits));
     drawWaveform();
     processSampling(samplingRate, quantBits);
     drawSamplingLines();
@@ -413,7 +420,7 @@
   checkAllBtn.addEventListener('click', checkAllAnswers);
 
   // 初期描画（空の軸のみ）
-  drawAxes();
+  drawAxes(Math.pow(2, quantBitsInput.value));
 })();
 </script>
 
