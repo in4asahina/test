@@ -2,317 +2,418 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<title>音のデジタル化学習教材</title>
+<title>音のデジタル化学習教材（ランダム波形・軸メモリ・複数入力欄）</title>
 <style>
   body {
     font-family: Arial, sans-serif;
     margin: 2em;
-    max-width: 800px;
+    max-width: 900px;
   }
   h1 {
     margin-bottom: 0.5em;
   }
   label {
-    display: inline-block;
-    width: 150px;
     font-weight: bold;
   }
-  input[type="number"], input[type="text"] {
-    width: 120px;
+  input[type="number"] {
+    width: 80px;
     padding: 0.3em;
     font-size: 1em;
+    margin-right: 1em;
   }
   button {
-    margin-left: 0.5em;
     padding: 0.4em 0.8em;
     font-size: 1em;
+    margin-top: 0.5em;
   }
   #waveform {
     border: 1px solid #ccc;
     margin-top: 1em;
     background: #f9f9f9;
   }
-  #samples {
+  #sampleInputs {
     margin-top: 1em;
-    font-size: 1.1em;
+    overflow-x: auto;
+    white-space: nowrap;
+    border: 1px solid #ccc;
+    padding: 0.5em;
+    background: #fafafa;
   }
-  #answerSection {
+  .sample-block {
+    display: inline-block;
+    vertical-align: top;
+    margin-right: 1em;
+    text-align: center;
+    font-size: 0.9em;
+    min-width: 70px;
+  }
+  .sample-block label {
+    display: block;
+    font-weight: normal;
+    margin-bottom: 0.3em;
+  }
+  .sample-block input {
+    width: 60px;
+    margin-bottom: 0.3em;
+    font-size: 1em;
+    padding: 0.2em;
+    box-sizing: border-box;
+    text-align: center;
+  }
+  #resultSummary {
     margin-top: 1em;
-  }
-  #result {
-    margin-top: 0.5em;
     font-weight: bold;
   }
-  #result.correct {
+  #resultSummary.correct {
     color: green;
   }
-  #result.incorrect {
+  #resultSummary.incorrect {
     color: red;
-  }
-  #encodingInfo {
-    font-size: 0.9em;
-    color: #555;
-    margin-top: 0.5em;
   }
 </style>
 </head>
 <body>
 
-<h1>音のデジタル化 学習教材</h1>
+<h1>音のデジタル化学習教材</h1>
 
 <div>
-  <label for="samplingRate">サンプリング周波数(Hz):</label>
-  <input type="number" id="samplingRate" value="10" min="1" max="1000" step="1" />
-</div>
-<div>
+  <label for="samplingRate">サンプリング周波数 (Hz):</label>
+  <input type="number" id="samplingRate" value="10" min="1" max="50" step="1" />
   <label for="quantBits">量子化ビット数:</label>
   <input type="number" id="quantBits" value="3" min="1" max="8" step="1" />
-</div>
-<div>
-  <button id="generateBtn">波形を区切る</button>
+  <button id="generateBtn">波形を生成・区切る</button>
 </div>
 
-<canvas id="waveform" width="700" height="200"></canvas>
+<canvas id="waveform" width="860" height="240"></canvas>
 
-<div id="samples"></div>
+<div id="sampleInputs" style="display:none;"></div>
 
-<div id="answerSection" style="display:none;">
-  <p id="currentSampleInfo"></p>
-  <label for="quantInput">量子化値を入力:</label>
-  <input type="text" id="quantInput" autocomplete="off" />
-  <button id="checkQuantBtn">答え合わせ</button>
-  <div id="result"></div>
-  <div id="encodingInfo"></div>
-  <button id="nextSampleBtn" style="display:none;">次のサンプルへ</button>
-</div>
+<button id="checkAllBtn" style="display:none; margin-top:1em;">まとめて答え合わせ</button>
+
+<div id="resultSummary"></div>
 
 <script>
 (() => {
   const canvas = document.getElementById('waveform');
   const ctx = canvas.getContext('2d');
+  const WIDTH = canvas.width;
+  const HEIGHT = canvas.height;
+  const marginLeft = 50;
+  const marginBottom = 40;
+  const marginTop = 20;
+  const marginRight = 20;
+  const plotWidth = WIDTH - marginLeft - marginRight;
+  const plotHeight = HEIGHT - marginTop - marginBottom;
+
   const samplingRateInput = document.getElementById('samplingRate');
   const quantBitsInput = document.getElementById('quantBits');
   const generateBtn = document.getElementById('generateBtn');
-  const samplesDiv = document.getElementById('samples');
-  const answerSection = document.getElementById('answerSection');
-  const currentSampleInfo = document.getElementById('currentSampleInfo');
-  const quantInput = document.getElementById('quantInput');
-  const checkQuantBtn = document.getElementById('checkQuantBtn');
-  const resultDiv = document.getElementById('result');
-  const encodingInfo = document.getElementById('encodingInfo');
-  const nextSampleBtn = document.getElementById('nextSampleBtn');
+  const sampleInputsDiv = document.getElementById('sampleInputs');
+  const checkAllBtn = document.getElementById('checkAllBtn');
+  const resultSummary = document.getElementById('resultSummary');
 
-  const WIDTH = canvas.width;
-  const HEIGHT = canvas.height;
-
-  // 1秒間の波形データ（サンプル数 1000, 0～1の範囲）
   let waveform = [];
-
-  // サンプリング後の値と符号化データ
   let sampledValues = [];
   let quantizedValues = [];
   let encodedValues = [];
+  let samplingCount = 0;
+  let quantBits = 3;
 
-  // 現在の入力サンプルインデックス
-  let currentIndex = 0;
-
-  // 波形生成（サイン波 + 少しノイズ）
+  // 1秒間1000ポイントの波形生成 (ランダム性＋振幅変動)
   function generateWaveform() {
     waveform = [];
-    const sampleCount = 1000; // 1000ポイント＝1秒を想定
+    const sampleCount = 1000;
+    // 振幅変動用の低周波変動(0.3〜0.7の範囲)
+    const ampBase = [];
+    for(let i=0; i<sampleCount; i++) {
+      // 0.1Hz程度のゆっくり変動をシミュレート
+      ampBase.push(0.5 + 0.2 * Math.sin(2 * Math.PI * 0.1 * (i/sampleCount*1000)));
+    }
     for(let i=0; i<sampleCount; i++) {
       const t = i / sampleCount;
-      // 5Hzサイン波 + ノイズ
-      const sine = 0.5 + 0.4 * Math.sin(2 * Math.PI * 5 * t);
-      const noise = (Math.random() - 0.5) * 0.05;
-      let val = sine + noise;
-      // 0～1にクリップ
+      // 5Hz〜15Hzの複数サイン波を足す
+      let val = 0;
+      val += 0.4 * Math.sin(2 * Math.PI * 5 * t);
+      val += 0.2 * Math.sin(2 * Math.PI * 11 * t + 1);
+      val += 0.1 * Math.sin(2 * Math.PI * 15 * t + 2);
+      // 振幅変動乗算
+      val *= ampBase[i];
+      // ノイズ
+      val += (Math.random() - 0.5) * 0.05;
+      // 0〜1に正規化
+      val = (val + 0.7) / 1.4;
       if(val < 0) val = 0;
       if(val > 1) val = 1;
       waveform.push(val);
     }
   }
 
+  // 軸とメモリを描画
+  function drawAxes() {
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    ctx.strokeStyle = '#000';
+    ctx.fillStyle = '#000';
+    ctx.lineWidth = 1;
+
+    // 縦軸 Y (振幅 0～1)
+    ctx.beginPath();
+    ctx.moveTo(marginLeft, marginTop);
+    ctx.lineTo(marginLeft, HEIGHT - marginBottom);
+    ctx.stroke();
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    // 5目盛り
+    for(let i=0; i<=5; i++) {
+      const y = marginTop + i * (plotHeight/5);
+      const val = (1 - i/5).toFixed(1);
+      ctx.fillText(val, marginLeft - 5, y);
+      ctx.beginPath();
+      ctx.strokeStyle = '#ccc';
+      ctx.moveTo(marginLeft, y);
+      ctx.lineTo(WIDTH - marginRight, y);
+      ctx.stroke();
+      ctx.strokeStyle = '#000';
+    }
+    ctx.fillText('振幅', marginLeft - 35, marginTop + plotHeight/2);
+
+    // 横軸 X (秒数 0～1秒)
+    ctx.beginPath();
+    ctx.moveTo(marginLeft, HEIGHT - marginBottom);
+    ctx.lineTo(WIDTH - marginRight, HEIGHT - marginBottom);
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    // 11目盛り (0.0〜1.0秒 0.1秒刻み)
+    for(let i=0; i<=10; i++) {
+      const x = marginLeft + i * (plotWidth / 10);
+      const t = (i/10).toFixed(1);
+      ctx.fillText(t + ' s', x, HEIGHT - marginBottom + 5);
+      ctx.beginPath();
+      ctx.strokeStyle = '#ccc';
+      ctx.moveTo(x, marginTop);
+      ctx.lineTo(x, HEIGHT - marginBottom);
+      ctx.stroke();
+      ctx.strokeStyle = '#000';
+    }
+    ctx.fillText('時間', marginLeft + plotWidth/2, HEIGHT - 10);
+  }
+
   // 波形描画
   function drawWaveform() {
-    ctx.clearRect(0, 0, WIDTH, HEIGHT);
     ctx.beginPath();
     ctx.strokeStyle = '#007acc';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.7;
     for(let i=0; i<waveform.length; i++) {
-      const x = (i / waveform.length) * WIDTH;
-      const y = HEIGHT - waveform[i] * HEIGHT;
+      const x = marginLeft + (i / waveform.length) * plotWidth;
+      const y = marginTop + (1 - waveform[i]) * plotHeight;
       if(i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
   }
 
-  // サンプリング・量子化・符号化処理
+  // サンプリング位置の縦線描画
+  function drawSamplingLines() {
+    ctx.strokeStyle = '#e60000';
+    ctx.lineWidth = 1;
+    for(const s of sampledValues) {
+      const x = marginLeft + (s.pos / waveform.length) * plotWidth;
+      ctx.beginPath();
+      ctx.moveTo(x, marginTop);
+      ctx.lineTo(x, marginTop + plotHeight);
+      ctx.stroke();
+    }
+  }
+
+  // サンプリング・量子化・符号化
   function processSampling(samplingRate, quantBits) {
-    const sampleCount = Math.floor(waveform.length * samplingRate / 1000);
+    samplingCount = Math.min(Math.floor(samplingRate), 50); // 最大50サンプルまで制限
+    quantBits = Math.min(Math.max(1, quantBits), 8);
     sampledValues = [];
     quantizedValues = [];
     encodedValues = [];
-
-    // 量子化の階調数
     const levels = Math.pow(2, quantBits);
-    for(let i=0; i<sampleCount; i++) {
-      // サンプリング位置
-      const pos = Math.floor(i * (waveform.length / sampleCount));
+
+    for(let i=0; i<samplingCount; i++) {
+      // 1000ポイント中の位置
+      const pos = Math.floor(i * (waveform.length / samplingCount));
       const val = waveform[pos];
       sampledValues.push({pos, val});
 
-      // 量子化（0～levels-1の整数）
+      // 量子化 (0～levels-1)
       let qVal = Math.floor(val * levels);
-      if(qVal === levels) qVal = levels -1; // 最大値調整
+      if(qVal >= levels) qVal = levels - 1;
       quantizedValues.push(qVal);
 
-      // 符号化（二進数文字列、量子化ビット数分0パディング）
+      // 符号化 (ビット列)
       const encoded = qVal.toString(2).padStart(quantBits, '0');
       encodedValues.push(encoded);
     }
   }
 
-  // 波形にサンプリング位置の縦線を描画
-  function drawSamplingLines() {
-    drawWaveform();
-    ctx.strokeStyle = '#e60000';
-    ctx.lineWidth = 1;
-    for(const s of sampledValues) {
-      const x = (s.pos / waveform.length) * WIDTH;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, HEIGHT);
-      ctx.stroke();
+  // 入力フォームを作成
+  function createInputForms() {
+    sampleInputsDiv.innerHTML = '';
+    if (samplingCount === 0) return;
+    const qBits = quantBitsInput.value;
+
+    for(let i=0; i<samplingCount; i++) {
+      const block = document.createElement('div');
+      block.className = 'sample-block';
+
+      // 時刻ラベル（秒単位）
+      const timeLabel = document.createElement('div');
+      timeLabel.style.fontWeight = 'bold';
+      const sec = (i / samplingCount).toFixed(2);
+      timeLabel.textContent = `t ≈ ${sec}s`;
+      block.appendChild(timeLabel);
+
+      // 量子化値入力欄（整数）
+      const quantLabel = document.createElement('label');
+      quantLabel.textContent = '量子化値 (整数)';
+      quantLabel.htmlFor = `quantInput_${i}`;
+      block.appendChild(quantLabel);
+
+      const quantInput = document.createElement('input');
+      quantInput.type = 'text';
+      quantInput.id = `quantInput_${i}`;
+      quantInput.dataset.index = i;
+      quantInput.placeholder = `0〜${Math.pow(2,qBits)-1}`;
+      block.appendChild(quantInput);
+
+      // 符号化値入力欄（二進数）
+      const encodedLabel = document.createElement('label');
+      encodedLabel.textContent = '符号化値 (二進数)';
+      encodedLabel.htmlFor = `encodedInput_${i}`;
+      block.appendChild(encodedLabel);
+
+      const encodedInput = document.createElement('input');
+      encodedInput.type = 'text';
+      encodedInput.id = `encodedInput_${i}`;
+      encodedInput.dataset.index = i;
+      encodedInput.placeholder = `${qBits}ビット`;
+      block.appendChild(encodedInput);
+
+      sampleInputsDiv.appendChild(block);
     }
+    sampleInputsDiv.style.display = 'block';
   }
 
-  // 問題の最初のサンプルの入力欄セット
-  function startAnswering() {
-    currentIndex = 0;
-    answerSection.style.display = 'block';
-    quantInput.value = '';
-    quantInput.focus();
-    nextSampleBtn.style.display = 'none';
-    resultDiv.textContent = '';
-    encodingInfo.textContent = '';
-    showCurrentSampleInfo();
-  }
+  // まとめて答え合わせ
+  function checkAllAnswers() {
+    const qBits = quantBitsInput.value;
+    const maxVal = Math.pow(2, qBits) - 1;
+    let allCorrect = true;
+    let messages = [];
 
-  // 現在のサンプル情報表示
-  function showCurrentSampleInfo() {
-    const s = sampledValues[currentIndex];
-    currentSampleInfo.textContent = `サンプル ${currentIndex+1} / ${sampledValues.length} - 波形の値: 約 ${s.val.toFixed(3)}`;
-    quantInput.value = '';
-    quantInput.focus();
-    resultDiv.textContent = '';
-    encodingInfo.textContent = '';
-    checkQuantBtn.disabled = false;
-    nextSampleBtn.style.display = 'none';
-  }
+    for(let i=0; i<samplingCount; i++) {
+      const quantInput = document.getElementById(`quantInput_${i}`);
+      const encodedInput = document.getElementById(`encodedInput_${i}`);
+      const userQuantRaw = quantInput.value.trim();
+      const userEncodedRaw = encodedInput.value.trim();
 
-  // 答え合わせ
-  function checkAnswer() {
-    const userInput = quantInput.value.trim();
-    const correctQuant = quantizedValues[currentIndex];
-    const correctEncoded = encodedValues[currentIndex];
-    let userQuant, userEncoded;
+      // 正解値
+      const correctQuant = quantizedValues[i];
+      const correctEncoded = encodedValues[i];
 
-    // 入力が2進数（0,1のみ）か整数か判別
-    if (/^[01]+$/.test(userInput)) {
-      userEncoded = userInput;
-      // 符号化値から量子化値を計算
-      userQuant = parseInt(userEncoded, 2);
-    } else if (/^\d+$/.test(userInput)) {
-      userQuant = parseInt(userInput, 10);
-      // 量子化値から符号化値を計算
-      userEncoded = userQuant.toString(2).padStart(quantBitsInput.value, '0');
+      let userQuant = null;
+      let userEncoded = null;
+
+      // 入力チェック＆判定
+      if(userQuantRaw !== '') {
+        if(!/^\d+$/.test(userQuantRaw)) {
+          messages.push(`サンプル${i+1}：量子化値は整数で入力してください。`);
+          allCorrect = false;
+          continue;
+        }
+        userQuant = parseInt(userQuantRaw,10);
+        if(userQuant < 0 || userQuant > maxVal) {
+          messages.push(`サンプル${i+1}：量子化値は0〜${maxVal}の範囲で入力してください。`);
+          allCorrect = false;
+          continue;
+        }
+      }
+      if(userEncodedRaw !== '') {
+        if(!/^[01]+$/.test(userEncodedRaw)) {
+          messages.push(`サンプル${i+1}：符号化値は0と1の二進数で入力してください。`);
+          allCorrect = false;
+          continue;
+        }
+        if(userEncodedRaw.length !== Number(qBits)) {
+          messages.push(`サンプル${i+1}：符号化値は${qBits}ビットで入力してください。`);
+          allCorrect = false;
+          continue;
+        }
+        userEncoded = userEncodedRaw;
+      }
+
+      // 量子化値と符号化値の両方または片方が入力されている場合の検証
+      if(userQuant !== null && userEncoded !== null) {
+        // 両方入力されているなら整合性チェック
+        if(userQuant !== parseInt(userEncoded, 2)) {
+          messages.push(`サンプル${i+1}：量子化値と符号化値が一致しません。`);
+          allCorrect = false;
+          continue;
+        }
+      } else if(userQuant === null && userEncoded !== null) {
+        userQuant = parseInt(userEncoded, 2);
+      } else if(userQuant !== null && userEncoded === null) {
+        userEncoded = userQuant.toString(2).padStart(qBits, '0');
+      } else {
+        messages.push(`サンプル${i+1}：量子化値か符号化値のどちらかを入力してください。`);
+        allCorrect = false;
+        continue;
+      }
+
+      // 正誤判定
+      if(userQuant === correctQuant) {
+        messages.push(`サンプル${i+1}：正解`);
+      } else {
+        messages.push(`サンプル${i+1}：不正解 (正しい量子化値: ${correctQuant}, 符号化値: ${correctEncoded})`);
+        allCorrect = false;
+      }
+    }
+
+    resultSummary.innerHTML = messages.join('<br>');
+    if(allCorrect) {
+      resultSummary.className = 'correct';
+      alert('すべて正解です！おめでとうございます！');
     } else {
-      resultDiv.textContent = '入力が不正です。量子化値（整数）か符号化値（二進数）を入力してください。';
-      resultDiv.className = 'incorrect';
-      return;
+      resultSummary.className = 'incorrect';
     }
-
-    // 正誤判定
-    if (userQuant === correctQuant) {
-      resultDiv.textContent = '正解！';
-      resultDiv.className = 'correct';
-    } else {
-      resultDiv.textContent = `不正解。正しい量子化値: ${correctQuant}, 符号化値: ${correctEncoded}`;
-      resultDiv.className = 'incorrect';
-    }
-
-    // 解説表示
-    const explanation = 
-      `【解説】\n` +
-      `- 波形の値: 約 ${sampledValues[currentIndex].val.toFixed(3)}\n` +
-      `- 量子化ビット数: ${quantBitsInput.value}\n` +
-      `- 量子化階調数: ${Math.pow(2, quantBitsInput.value)}\n` +
-      `- 量子化値 (整数): ${correctQuant}\n` +
-      `- 符号化（二進数）: ${correctEncoded}`;
-
-    encodingInfo.textContent = explanation;
-
-    checkQuantBtn.disabled = true;
-    nextSampleBtn.style.display = 'inline-block';
   }
 
-  // 次のサンプルへ
-  function nextSample() {
-    currentIndex++;
-    if (currentIndex >= sampledValues.length) {
-      currentSampleInfo.textContent = 'すべての問題を終了しました。お疲れさまでした！';
-      quantInput.style.display = 'none';
-      checkQuantBtn.style.display = 'none';
-      nextSampleBtn.style.display = 'none';
-      encodingInfo.textContent = '';
-      resultDiv.textContent = '';
-      return;
-    }
-    quantInput.style.display = 'inline-block';
-    checkQuantBtn.style.display = 'inline-block';
-    showCurrentSampleInfo();
-  }
-
-  // 波形を区切るボタン押下時の処理
+  // メイン処理
   generateBtn.addEventListener('click', () => {
     const samplingRate = Number(samplingRateInput.value);
-    const quantBits = Number(quantBitsInput.value);
+    const quantBitNum = Number(quantBitsInput.value);
 
-    if (!samplingRate || samplingRate < 1 || samplingRate > 1000) {
-      alert('サンプリング周波数は1～1000の整数で入力してください。');
+    if (!(samplingRate >=1 && samplingRate <= 50 && Number.isInteger(samplingRate))) {
+      alert('サンプリング周波数は1〜50の整数で入力してください。');
       return;
     }
-    if (!quantBits || quantBits < 1 || quantBits > 8) {
-      alert('量子化ビット数は1～8の整数で入力してください。');
+    if (!(quantBitNum >=1 && quantBitNum <= 8 && Number.isInteger(quantBitNum))) {
+      alert('量子化ビット数は1〜8の整数で入力してください。');
       return;
     }
 
+    quantBits = quantBitNum;
+
+    generateWaveform();
+    drawAxes();
+    drawWaveform();
     processSampling(samplingRate, quantBits);
     drawSamplingLines();
-
-    // サンプル値一覧表示（簡易）
-    let sampleStr = 'サンプル位置（X軸ピクセル）: ';
-    sampledValues.forEach((s,i) => {
-      sampleStr += `${Math.floor((s.pos / waveform.length)*WIDTH)}${i < sampledValues.length-1 ? ', ' : ''}`;
-    });
-    samplesDiv.textContent = sampleStr;
-
-    // 入力欄表示開始
-    quantInput.style.display = 'inline-block';
-    checkQuantBtn.style.display = 'inline-block';
-    answerSection.style.display = 'block';
-
-    startAnswering();
+    createInputForms();
+    checkAllBtn.style.display = 'inline-block';
+    resultSummary.textContent = '';
   });
 
-  checkQuantBtn.addEventListener('click', checkAnswer);
-  nextSampleBtn.addEventListener('click', nextSample);
+  checkAllBtn.addEventListener('click', checkAllAnswers);
 
-  generateWaveform();
-  drawWaveform();
-
+  // 初期描画（空の軸のみ）
+  drawAxes();
 })();
 </script>
 
