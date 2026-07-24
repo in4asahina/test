@@ -1,428 +1,422 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<title>音のデジタル化学習教材（滑らかな波形・振幅バリエーション・ビット数連動軸）</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    margin: 2em;
-    max-width: 900px;
-  }
-  h1 {
-    margin-bottom: 0.5em;
-  }
-  label {
-    font-weight: bold;
-  }
-  input[type="number"] {
-    width: 80px;
-    padding: 0.3em;
-    font-size: 1em;
-    margin-right: 1em;
-  }
-  button {
-    padding: 0.4em 0.8em;
-    font-size: 1em;
-    margin-top: 0.5em;
-  }
-  #waveform {
-    border: 1px solid #ccc;
-    margin-top: 1em;
-    background: #f9f9f9;
-  }
-  #sampleInputs {
-    margin-top: 1em;
-    overflow-x: auto;
-    white-space: nowrap;
-    border: 1px solid #ccc;
-    padding: 0.5em;
-    background: #fafafa;
-  }
-  .sample-block {
-    display: inline-block;
-    vertical-align: top;
-    margin-right: 1em;
-    text-align: center;
-    font-size: 0.9em;
-    min-width: 70px;
-  }
-  .sample-block label {
-    display: block;
-    font-weight: normal;
-    margin-bottom: 0.3em;
-  }
-  .sample-block input {
-    width: 60px;
-    margin-bottom: 0.3em;
-    font-size: 1em;
-    padding: 0.2em;
-    box-sizing: border-box;
-    text-align: center;
-  }
-  #resultSummary {
-    margin-top: 1em;
-    font-weight: bold;
-  }
-  #resultSummary.correct {
-    color: green;
-  }
-  #resultSummary.incorrect {
-    color: red;
-  }
-</style>
+  <meta charset="utf-8" />
+  <title>プログラミングの基本</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+
+  <style>
+    body {
+      margin:0; padding:28px;
+      font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","メイリオ",sans-serif;
+      background:#f6f8fb; color:#222;
+    }
+    .container { max-width:960px; margin:0 auto; }
+
+    .title {
+      font-size:40px;
+      font-weight:bold;
+      margin-bottom:28px;
+      padding-bottom:12px;
+      border-bottom:3px solid #0078d4;
+    }
+
+    .card {
+      background:#fff; padding:20px 24px;
+      border-radius:10px; border:1px solid #dde3f0;
+      box-shadow:0 6px 18px rgba(0,0,0,0.06);
+      margin-bottom:24px;
+    }
+
+    textarea {
+      width:100%;
+      min-height:160px;
+      font-family:Menlo,Consolas,monospace;
+      font-size:15px;
+      padding:12px 12px;
+      box-sizing:border-box;
+      border-radius:8px;
+      border:1px solid #ccd6e6;
+      background:#fbfbfb;
+      resize:none;
+      overflow:hidden;
+    }
+
+    .output, .result {
+      margin-top:14px; padding:12px;
+      border-radius:8px; white-space:pre-wrap;
+      font-size:14px;
+    }
+    .output { background:#eef7ff; border:1px solid #cce0ff; }
+    .result { background:#f7f9fc; border:1px solid #eef3fb; }
+
+    .okmark {
+      color:#1b5e20;
+      font-size:18px;
+      font-weight:bold;
+      display:none;
+      line-height:1;
+      padding-top:2px;
+    }
+
+    .maru { color:#1b5e20; font-weight:bold; }
+    .batsu { color:#c62828; font-weight:bold; }
+
+    button {
+      height:40px;
+      padding:0 18px;
+      border-radius:8px;
+      border:0;
+      cursor:pointer;
+      font-size:16px;
+      line-height:40px;
+      margin-top:10px;
+    }
+    .btn-primary { background:#0078d4; color:#fff; }
+
+    .overall {
+      margin-top:20px;
+      padding:28px;
+      background:#fff;
+      border-radius:12px;
+      border:3px solid #aac8f0;
+      box-shadow:0 6px 18px rgba(0,0,0,0.08);
+      font-size:26px;
+      font-weight:bold;
+      white-space:pre-wrap;
+      color:#999;
+    }
+
+    .log {
+      margin-top:12px; font-size:12px; color:#666;
+      background:#f3f5fb; padding:8px;
+      border-radius:6px; border:1px solid #e1e6f5;
+      white-space:pre-wrap;
+    }
+  </style>
 </head>
+
 <body>
+<div class="container">
 
-<h1>音のデジタル化学習教材</h1>
+  <div class="title">プログラミングの基本</div>
 
-<div>
-  <label for="samplingRate">サンプリング周波数 (Hz):</label>
-  <input type="number" id="samplingRate" value="10" min="1" max="50" step="1" />
-  <label for="quantBits">量子化ビット数:</label>
-  <input type="number" id="quantBits" value="3" min="1" max="8" step="1" />
-  <button id="generateBtn">波形を生成・区切る</button>
+  <!-- 問1 -->
+  <div class="card">
+    <h2>問1：Hello World を表示せよ</h2>
+    <textarea id="q1Input" placeholder="print('Hello World')"></textarea>
+
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button class="btn-primary" onclick="runQ1()">実行</button>
+      <span id="q1OK" class="okmark">OK</span>
+    </div>
+
+    <div id="q1Output" class="output">出力結果がここに表示されます。</div>
+    <div id="q1Result" class="result">得点がここに表示されます。</div>
+  </div>
+
+  <!-- 問2 -->
+  <div class="card">
+    <h2>問2：a=2, b=3 を使い a+b を表示せよ</h2>
+    <textarea id="q2Input" placeholder="a = 2&#10;b = 3&#10;print(a + b)"></textarea>
+
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button class="btn-primary" onclick="runQ2()">実行</button>
+      <span id="q2OK" class="okmark">OK</span>
+    </div>
+
+    <div id="q2Output" class="output">出力結果がここに表示されます。</div>
+    <div id="q2Result" class="result">得点がここに表示されます。</div>
+  </div>
+
+  <!-- 問3 -->
+  <div class="card">
+    <h2>問3：入力された2つの数値の合計を求めよ</h2>
+    <textarea id="q3Input" placeholder="a = int(input())&#10;b = int(input())&#10;print(a + b)"></textarea>
+
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button class="btn-primary" onclick="runQ3()">実行</button>
+      <span id="q3OK" class="okmark">OK</span>
+    </div>
+
+    <div id="q3Output" class="output">出力結果がここに表示されます。</div>
+    <div id="q3Result" class="result">得点がここに表示されます。</div>
+  </div>
+
+  <div id="resultBox" class="overall">総合結果がここに表示されます。</div>
+
+  <div id="logBox" class="log">ログ: 初期化中…</div>
+
 </div>
 
-<canvas id="waveform" width="860" height="240"></canvas>
-
-<div id="sampleInputs" style="display:none;"></div>
-
-<button id="checkAllBtn" style="display:none; margin-top:1em;">まとめて答え合わせ</button>
-
-<div id="resultSummary"></div>
-
 <script>
-(() => {
-  const canvas = document.getElementById('waveform');
-  const ctx = canvas.getContext('2d');
-  const WIDTH = canvas.width;
-  const HEIGHT = canvas.height;
-  const marginLeft = 50;
-  const marginBottom = 40;
-  const marginTop = 20;
-  const marginRight = 20;
-  const plotWidth = WIDTH - marginLeft - marginRight;
-  const plotHeight = HEIGHT - marginTop - marginBottom;
+/* -------------------------
+   SCORM API 初期化
+------------------------- */
+let API = null;
 
-  const samplingRateInput = document.getElementById('samplingRate');
-  const quantBitsInput = document.getElementById('quantBits');
-  const generateBtn = document.getElementById('generateBtn');
-  const sampleInputsDiv = document.getElementById('sampleInputs');
-  const checkAllBtn = document.getElementById('checkAllBtn');
-  const resultSummary = document.getElementById('resultSummary');
+function findAPI() {
+  let win = window;
+  while (win.API == null && win.parent != null && win.parent != win) {
+    win = win.parent;
+  }
+  API = win.API;
+}
 
-  let waveform = [];
-  let sampledValues = [];
-  let quantizedValues = [];
-  let encodedValues = [];
-  let samplingCount = 0;
-  let quantBits = 3;
+function initSCORM() {
+  findAPI();
+  if (API) API.LMSInitialize("");
+}
 
-  // 1秒間1000ポイントの滑らかな波形生成（振幅強弱バリエーションあり）
-  function generateWaveform() {
-    waveform = [];
-    const sampleCount = 1000;
+function finishSCORM() {
+  if (API) API.LMSFinish("");
+}
 
-    // 振幅変動を滑らかに変化させるための低周波変動 (0.3〜0.7の範囲)
-    const ampBase = [];
-    for(let i=0; i<sampleCount; i++) {
-      // 0.1Hzのゆったり変動、サイン波1本でシンプルに
-      ampBase.push(0.5 + 0.2 * Math.sin(2 * Math.PI * 0.1 * (i/sampleCount*1000)));
-    }
+window.onload = function() {
+  initSCORM();
+  loadSuspendData();
+};
+window.onunload = finishSCORM;
 
-    // 波形は複数の低周波サイン波の和（5Hz, 10Hz）で滑らかに
-    for(let i=0; i<sampleCount; i++) {
-      const t = i / sampleCount;
-      // 5Hz, 10Hzのサイン波のみ。ノイズはなしで滑らかに
-      let val = 0;
-      val += 0.5 * Math.sin(2 * Math.PI * 5 * t);
-      val += 0.3 * Math.sin(2 * Math.PI * 10 * t + 1);
-      // 振幅変動乗算
-      val *= ampBase[i];
-      // 正規化 (±0.8 → 0〜1に変換)
-      val = (val + 0.8) / 1.6;
-      if(val < 0) val = 0;
-      if(val > 1) val = 1;
-      waveform.push(val);
-    }
+/* -------------------------
+   Pyodide
+------------------------- */
+let pyodide = null;
+
+/* 問3の a,b をランダム化 */
+let aVal = Math.floor(Math.random() * 10) + 1;
+let bVal = Math.floor(Math.random() * 10) + 1;
+
+async function initPyodide() {
+  pyodide = await loadPyodide();
+}
+initPyodide();
+
+/* textarea 自動リサイズ */
+document.addEventListener("input", e => {
+  if(e.target.tagName.toLowerCase() === "textarea"){
+    e.target.style.height = "auto";
+    e.target.style.height = e.target.scrollHeight + "px";
+  }
+});
+
+/* Python 実行 */
+async function runPython(code, inputs=[]) {
+  let output = "";
+  pyodide.setStdout({ batched: data => output += data });
+
+  const wrapped = `
+def __student_main():
+    import sys
+    input_values = ${JSON.stringify(inputs)}
+    def fake_input(prompt=""):
+        return input_values.pop(0)
+    __builtins__.input = fake_input
+    try:
+        exec("""${code.replace(/"/g,'\\"')}""")
+    except Exception as e:
+        print("ERROR:", e)
+__student_main()
+`;
+
+  try { await pyodide.runPythonAsync(wrapped); }
+  catch(e){ output += "ERROR: " + e.message; }
+
+  return output.trim();
+}
+
+function mark(b){ return b ? '<span class="maru">○</span>' : '<span class="batsu">×</span>'; }
+
+/* ---- 問1 ---- */
+async function runQ1() {
+  const code = q1Input.value;
+  const out = await runPython(code);
+
+  q1Output.textContent = out || "(出力なし)";
+
+  const sPrint = /print\s*\(/.test(code);
+  const sHello = /hello\s*world/i.test(out);
+  const total = (sPrint?10:0)+(sHello?20:0);
+
+  q1Result.innerHTML =
+    `<span style="font-size:20px; font-weight:bold;">得点: ${total}/30</span>\n` +
+    `・print を使っている: ${mark(sPrint)}（10点）\n` +
+    `・Hello World を表示: ${mark(sHello)}（20点）`;
+
+  q1OK.style.display = total===30 ? "inline" : "none";
+
+  /* 解答詳細用：Q1 のコードを送信 */
+  if (API) {
+    API.LMSSetValue("cmi.interactions.0.id", "Q1");
+    API.LMSSetValue("cmi.interactions.0.student_response", code);
+    API.LMSSetValue(
+      "cmi.interactions.0.result",
+      (sPrint && sHello) ? "correct" : "wrong"
+    );
   }
 
-  // 軸とメモリ描画（縦軸は量子化ビット数に合わせて0から区切る、破線で半段階値を表示）
-  function drawAxes(levels) {
-    ctx.clearRect(0, 0, WIDTH, HEIGHT);
-    ctx.strokeStyle = '#000';
-    ctx.fillStyle = '#000';
-    ctx.lineWidth = 1;
+  updateOverall();
+}
 
-    // 縦軸 Y (量子化レベル数に応じて0～levels)
-    ctx.beginPath();
-    ctx.moveTo(marginLeft, marginTop);
-    ctx.lineTo(marginLeft, HEIGHT - marginBottom);
-    ctx.stroke();
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
+/* ---- 問2 ---- */
+async function runQ2() {
+  const code = q2Input.value;
+  const out = await runPython(code);
 
-    // 目盛りはつけないが、破線で半段階の横線を描画（色薄く）
-    ctx.strokeStyle = '#999';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4,4]);
-    for(let i=0; i<=levels*2; i++) {
-      // iは0,0.5,1,1.5,...levelsの半段階
-      const y = marginTop + plotHeight * (1 - i/(levels*2));
-      ctx.beginPath();
-      ctx.moveTo(marginLeft, y);
-      ctx.lineTo(WIDTH - marginRight, y);
-      ctx.stroke();
-    }
-    ctx.setLineDash([]);
-    ctx.strokeStyle = '#000';
+  q2Output.textContent = out || "(出力なし)";
 
-    // 縦軸ラベル
-    ctx.fillText('量子化レベル', marginLeft - 35, marginTop + plotHeight/2);
+  const hasA = /a\s*=\s*2/.test(code);
+  const usesAB = /a\s*\+\s*b/.test(code);
+  const correct = out.includes("5");
 
-    // 横軸 X (秒数 0～1秒)
-    ctx.beginPath();
-    ctx.moveTo(marginLeft, HEIGHT - marginBottom);
-    ctx.lineTo(WIDTH - marginRight, HEIGHT - marginBottom);
-    ctx.stroke();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
+  const total = (hasA?10:0)+(usesAB?10:0)+(correct?10:0);
 
-    // 11目盛り (0.0〜1.0秒 0.1秒刻み)
-    for(let i=0; i<=10; i++) {
-      const x = marginLeft + i * (plotWidth / 10);
-      const t = (i/10).toFixed(1);
-      ctx.fillText(t + ' s', x, HEIGHT - marginBottom + 5);
-      // 軽い縦線メモリ（薄いグレー）
-      ctx.strokeStyle = '#ccc';
-      ctx.beginPath();
-      ctx.moveTo(x, marginTop);
-      ctx.lineTo(x, HEIGHT - marginBottom);
-      ctx.stroke();
-      ctx.strokeStyle = '#000';
-    }
-    ctx.fillText('時間', marginLeft + plotWidth/2, HEIGHT - 10);
+  q2Result.innerHTML =
+    `<span style="font-size:20px; font-weight:bold;">得点: ${total}/30</span>\n` +
+    `・a=2 を使っている: ${mark(hasA)}（10点）\n` +
+    `・a+b を使っている: ${mark(usesAB)}（10点）\n` +
+    `・正しい出力（5）: ${mark(correct)}（10点）`;
+
+  q2OK.style.display = total===30 ? "inline" : "none";
+
+  /* 解答詳細用：Q2 のコードを送信 */
+  if (API) {
+    API.LMSSetValue("cmi.interactions.1.id", "Q2");
+    API.LMSSetValue("cmi.interactions.1.student_response", code);
+    API.LMSSetValue(
+      "cmi.interactions.1.result",
+      (hasA && usesAB && correct) ? "correct" : "wrong"
+    );
   }
 
-  // 波形描画（滑らかな1本の曲線）
-  function drawWaveform() {
-    ctx.beginPath();
-    ctx.strokeStyle = '#007acc';
-    ctx.lineWidth = 1.7;
-    for(let i=0; i<waveform.length; i++) {
-      const x = marginLeft + (i / waveform.length) * plotWidth;
-      const y = marginTop + (1 - waveform[i]) * plotHeight;
-      if(i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
+  updateOverall();
+}
+
+/* ---- 問3 ---- */
+async function runQ3() {
+  const code = q3Input.value;
+
+  const out = await runPython(code, [String(aVal), String(bVal)]);
+
+  q3Output.textContent = out || "(出力なし)";
+
+  const hasInput = /input\s*\(/.test(code);
+  const correct = out.includes(String(aVal + bVal));
+
+  const total = (hasInput?10:0)+(correct?20:0);
+
+  q3Result.innerHTML =
+    `<span style="font-size:20px; font-weight:bold;">得点: ${total}/30</span>\n` +
+    `・input を使っている: ${mark(hasInput)}（10点）\n` +
+    `・正しい合計（${aVal + bVal}）※a=${aVal}, b=${bVal}（20点）`;
+
+  q3OK.style.display = total===30 ? "inline" : "none";
+
+  /* 解答詳細用：Q3 のコードを送信 */
+  if (API) {
+    API.LMSSetValue("cmi.interactions.2.id", "Q3");
+    API.LMSSetValue("cmi.interactions.2.student_response", code);
+    API.LMSSetValue(
+      "cmi.interactions.2.result",
+      correct ? "correct" : "wrong"
+    );
   }
 
-  // サンプリング位置の縦線描画
-  function drawSamplingLines() {
-    ctx.strokeStyle = '#e60000';
-    ctx.lineWidth = 1;
-    for(const s of sampledValues) {
-      const x = marginLeft + (s.pos / waveform.length) * plotWidth;
-      ctx.beginPath();
-      ctx.moveTo(x, marginTop);
-      ctx.lineTo(x, marginTop + plotHeight);
-      ctx.stroke();
-    }
+  updateOverall();
+}
+
+/* ---- 総合結果 ---- */
+function updateOverall() {
+  const s1 = parseInt(q1Result.textContent.match(/得点: (\d+)/)?.[1] || 0);
+  const s2 = parseInt(q2Result.textContent.match(/得点: (\d+)/)?.[1] || 0);
+  const s3 = parseInt(q3Result.textContent.match(/得点: (\d+)/)?.[1] || 0);
+
+  const total = s1 + s2 + s3;
+  const passed = (total === 90);
+
+  /* LMS に送信 */
+  if (API) {
+    API.LMSSetValue("cmi.core.score.raw", String(total));
+    API.LMSSetValue("cmi.core.lesson_status", passed ? "passed" : "failed");
   }
 
-  // サンプリング・量子化・符号化
-  function processSampling(samplingRate, quantBits) {
-    samplingCount = Math.min(Math.floor(samplingRate), 50); // 最大50サンプルまで制限
-    quantBits = Math.min(Math.max(1, quantBits), 8);
-    sampledValues = [];
-    quantizedValues = [];
-    encodedValues = [];
-    const levels = Math.pow(2, quantBits);
+  /* suspend_data 保存（フォーム内容も保存） */
+  const saveData = {
+    q1:s1, q2:s2, q3:s3,
+    total:total,
+    passed:passed,
+    a:aVal, b:bVal,
+    code1:q1Input.value,
+    code2:q2Input.value,
+    code3:q3Input.value
+  };
 
-    for(let i=0; i<samplingCount; i++) {
-      // 1000ポイント中の位置
-      const pos = Math.floor(i * (waveform.length / samplingCount));
-      const val = waveform[pos];
-      sampledValues.push({pos, val});
-
-      // 量子化 (0～levels-1)
-      let qVal = Math.floor(val * levels);
-      if(qVal >= levels) qVal = levels - 1;
-      quantizedValues.push(qVal);
-
-      // 符号化 (ビット列)
-      const encoded = qVal.toString(2).padStart(quantBits, '0');
-      encodedValues.push(encoded);
-    }
+  if (API) {
+    API.LMSSetValue("cmi.suspend_data", JSON.stringify(saveData));
+    API.LMSCommit("");
   }
 
-  // 入力フォームを作成
-  function createInputForms() {
-    sampleInputsDiv.innerHTML = '';
-    if (samplingCount === 0) return;
-    const qBits = quantBitsInput.value;
-
-    for(let i=0; i<samplingCount; i++) {
-      const block = document.createElement('div');
-      block.className = 'sample-block';
-
-      // 時刻ラベル（秒単位）
-      const timeLabel = document.createElement('div');
-      timeLabel.style.fontWeight = 'bold';
-      const sec = (i / samplingCount).toFixed(2);
-      timeLabel.textContent = `t ≈ ${sec}s`;
-      block.appendChild(timeLabel);
-
-      // 量子化値入力欄（整数）
-      const quantLabel = document.createElement('label');
-      quantLabel.textContent = '量子化値 (整数)';
-      quantLabel.htmlFor = `quantInput_${i}`;
-      block.appendChild(quantLabel);
-
-      const quantInput = document.createElement('input');
-      quantInput.type = 'text';
-      quantInput.id = `quantInput_${i}`;
-      quantInput.dataset.index = i;
-      quantInput.placeholder = `0〜${Math.pow(2,qBits)-1}`;
-      block.appendChild(quantInput);
-
-      // 符号化値入力欄（二進数）
-      const encodedLabel = document.createElement('label');
-      encodedLabel.textContent = '符号化値 (二進数)';
-      encodedLabel.htmlFor = `encodedInput_${i}`;
-      block.appendChild(encodedLabel);
-
-      const encodedInput = document.createElement('input');
-      encodedInput.type = 'text';
-      encodedInput.id = `encodedInput_${i}`;
-      encodedInput.dataset.index = i;
-      encodedInput.placeholder = `${qBits}ビット`;
-      block.appendChild(encodedInput);
-
-      sampleInputsDiv.appendChild(block);
-    }
-    sampleInputsDiv.style.display = 'block';
+  /* 表示 */
+  let text = `総合得点: ${total}/90`;
+  if (passed) {
+    text += ` <span style="color:#c62828;">合格</span>`;
   }
 
-  // まとめて答え合わせ
-  function checkAllAnswers() {
-    const qBits = quantBitsInput.value;
-    const maxVal = Math.pow(2, qBits) - 1;
-    let allCorrect = true;
-    let messages = [];
+  resultBox.innerHTML = text;
+  resultBox.style.color = "#000";
+  resultBox.style.borderColor = "#0078d4";
+}
 
-    for(let i=0; i<samplingCount; i++) {
-      const quantInput = document.getElementById(`quantInput_${i}`);
-      const encodedInput = document.getElementById(`encodedInput_${i}`);
-      const userQuantRaw = quantInput.value.trim();
-      const userEncodedRaw = encodedInput.value.trim();
+/* ---- suspend_data 読み込み ---- */
+function loadSuspendData() {
+  if (!API) return;
 
-      // 正解値
-      const correctQuant = quantizedValues[i];
-      const correctEncoded = encodedValues[i];
+  const raw = API.LMSGetValue("cmi.suspend_data");
+  if (!raw) return;
 
-      let userQuant = null;
-      let userEncoded = null;
+  try {
+    const data = JSON.parse(raw);
 
-      // 入力チェック＆判定
-      if(userQuantRaw !== '') {
-        if(!/^\d+$/.test(userQuantRaw)) {
-          messages.push(`サンプル${i+1}：量子化値は整数で入力してください。`);
-          allCorrect = false;
-          continue;
-        }
-        userQuant = parseInt(userQuantRaw,10);
-        if(userQuant < 0 || userQuant > maxVal) {
-          messages.push(`サンプル${i+1}：量子化値は0〜${maxVal}の範囲で入力してください。`);
-          allCorrect = false;
-          continue;
-        }
-      }
-      if(userEncodedRaw !== '') {
-        if(!/^[01]+$/.test(userEncodedRaw)) {
-          messages.push(`サンプル${i+1}：符号化値は0と1の二進数で入力してください。`);
-          allCorrect = false;
-          continue;
-        }
-        if(userEncodedRaw.length !== Number(qBits)) {
-          messages.push(`サンプル${i+1}：符号化値は${qBits}ビットで入力してください。`);
-          allCorrect = false;
-          continue;
-        }
-        userEncoded = userEncodedRaw;
-      }
+    /* a,b を復元 */
+    if (data.a !== undefined) aVal = data.a;
+    if (data.b !== undefined) bVal = data.b;
 
-      // 量子化値と符号化値の両方または片方が入力されている場合の検証
-      if(userQuant !== null && userEncoded !== null) {
-        // 両方入力されているなら整合性チェック
-        if(userQuant !== parseInt(userEncoded, 2)) {
-messages.push(`サンプル${i+1}：量子化値と符号化値が一致しません。`);
-          allCorrect = false;
-          continue;
-        }
-      } else if(userQuant === null && userEncoded !== null) {
-        userQuant = parseInt(userEncoded, 2);
-      } else if(userQuant !== null && userEncoded === null) {
-        userEncoded = userQuant.toString(2).padStart(qBits, '0');
-      } else {
-        messages.push(`サンプル${i+1}：量子化値か符号化値のどちらかを入力してください。`);
-        allCorrect = false;
-        continue;
-      }
+    /* フォーム内容を復元 */
+    if (data.code1) q1Input.value = data.code1;
+    if (data.code2) q2Input.value = data.code2;
+    if (data.code3) q3Input.value = data.code3;
 
-      // 正誤判定
-      if(userQuant === correctQuant) {
-        messages.push(`サンプル${i+1}：正解`);
-      } else {
-        messages.push(`サンプル${i+1}：不正解 (正しい量子化値: ${correctQuant}, 符号化値: ${correctEncoded})`);
-        allCorrect = false;
-      }
+    /* 各問の得点復元 */
+    if (data.q1 !== undefined) {
+      q1Result.innerHTML = `<span style="font-size:20px; font-weight:bold;">得点: ${data.q1}/30</span>`;
+      if (data.q1 === 30) q1OK.style.display = "inline";
+    }
+    if (data.q2 !== undefined) {
+      q2Result.innerHTML = `<span style="font-size:20px; font-weight:bold;">得点: ${data.q2}/30</span>`;
+      if (data.q2 === 30) q2OK.style.display = "inline";
+    }
+    if (data.q3 !== undefined) {
+      q3Result.innerHTML =
+        `<span style="font-size:20px; font-weight:bold;">得点: ${data.q3}/30</span>\n` +
+        `・正しい合計（${data.a + data.b}）※a=${data.a}, b=${data.b}`;
+      if (data.q3 === 30) q3OK.style.display = "inline";
     }
 
-    resultSummary.innerHTML = messages.join('<br>');
-    if(allCorrect) {
-      resultSummary.className = 'correct';
-      alert('すべて正解です！おめでとうございます！');
-    } else {
-      resultSummary.className = 'incorrect';
+    /* 総合得点復元 */
+    let text = `総合得点: ${data.total}/90`;
+    if (data.passed) {
+      text += ` <span style="color:#c62828;">合格</span>`;
     }
+    resultBox.innerHTML = text;
+    resultBox.style.color = "#000";
+    resultBox.style.borderColor = "#0078d4";
+
+  } catch(e) {
+    console.log("suspend_data 読み込みエラー:", e);
   }
-
-  // メイン処理
-  generateBtn.addEventListener('click', () => {
-    const samplingRate = Number(samplingRateInput.value);
-    const quantBitNum = Number(quantBitsInput.value);
-
-    if (!(samplingRate >=1 && samplingRate <= 50 && Number.isInteger(samplingRate))) {
-      alert('サンプリング周波数は1〜50の整数で入力してください。');
-      return;
-    }
-    if (!(quantBitNum >=1 && quantBitNum <= 8 && Number.isInteger(quantBitNum))) {
-      alert('量子化ビット数は1〜8の整数で入力してください。');
-      return;
-    }
-
-    quantBits = quantBitNum;
-
-    generateWaveform();
-    drawAxes(Math.pow(2, quantBits));
-    drawWaveform();
-    processSampling(samplingRate, quantBits);
-    drawSamplingLines();
-    createInputForms();
-    checkAllBtn.style.display = 'inline-block';
-    resultSummary.textContent = '';
-  });
-
-  checkAllBtn.addEventListener('click', checkAllAnswers);
-
-  // 初期描画（空の軸のみ）
-  drawAxes(Math.pow(2, quantBitsInput.value));
-})();
+}
 </script>
-
 </body>
 </html>
